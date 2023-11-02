@@ -1,0 +1,49 @@
+# Import required modules:
+import requests
+import json
+from pprint import pprint
+from requests.auth import HTTPDigestAuth
+from getpass import getpass
+import os
+
+# Prompt the user to provide connection and authentication details:
+ip_address = input("Enter your IP address: ")  # Asks the user for the IP address of the target device.
+cam_user = input("Enter username: ")           # Gathers the username needed to access the device.
+cam_pass = getpass("Enter password: ")         # Retrieves the password in a secure manner (won't display characters).
+
+# Use the provided credentials to set up HTTP Digest Authentication:
+auth = HTTPDigestAuth(cam_user, cam_pass)
+
+# Assemble the request URL by joining the base URL with the user-specified IP address:
+url = "http://"+ip_address+"/axis-cgi/firmwaremanagement.cgi"
+
+# Prompt user to enter the name of the firmware file
+firmware_file_name = input("Enter the firmware file name (with .bin extension): ")
+
+# Check if the file exists in the current directory
+if not os.path.isfile(firmware_file_name):
+    print(f"The firmware file '{firmware_file_name}' does not exist in the current directory.")
+    exit(1)  # Exit the script if the file does not exist
+
+# Payload information
+payload = {
+  "apiVersion": "1.3",
+  "context": "abc",
+  "method": "upgrade"
+}
+
+# Set up the 'files' dictionary to contain the payload as JSON and the binary file with proper content type
+files = {
+    'api': ('', json.dumps(payload), 'application/json'),  # The API payload goes here as JSON
+    'fileData': (firmware_file_name, open(firmware_file_name, 'rb'), 'application/octet-stream')  # The binary file goes here
+}
+
+# Send the POST request with the file and the payload
+response = requests.post(url, auth=auth, files=files)
+
+# Print the status code and response text
+print("Status Code:", response.status_code)
+pprint(response.text)
+
+# Close the file
+files['fileData'][1].close()
